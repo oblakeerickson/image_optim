@@ -118,14 +118,19 @@ class ImageOptim
     optimized = @cache.fetch(original) do
       Handler.for(original) do |handler|
         current_worker = nil
+        was_optimized = false
 
         begin
-          with_timeout(@timeout) do
-            workers.each do |worker|
+          with_timeout(@timeout) do # Global timeout
+
+            workers.each.with_index(1) do |worker, index|
               current_worker = worker
               if worker.timeout && worker.timeout >= 0
-                with_timeout(worker.timeout) do
-                  handler.process{ |src, dst| worker.optimize(src, dst) }
+                with_timeout(worker.timeout, index, workers.count) do # Worker timeout
+                  handler.process do |src, dst|
+                    result = worker.optimize(src, dst)
+                    was_optimized = result if result
+                  end
                 end
               else
                 handler.process{ |src, dst| worker.optimize(src, dst) }
@@ -133,12 +138,14 @@ class ImageOptim
             end
           end
         rescue TimeoutExceeded => e
-          if current_worker && current_worker.pid
-            pid = current_worker.pid
-            cleanup_process(pid)
-          end
+          unless was_optimized
+            if current_worker && current_worker.pid
+              pid = current_worker.pid
+              cleanup_process(pid)
+            end
 
-          raise e
+            raise e
+          end
         end
       end
     end
@@ -255,13 +262,25 @@ class ImageOptim
 
 private
 
-  def with_timeout(timeout)
+  def with_timeout(timeout, worker_index = nil, total_workers = nil)
     if timeout && timeout >= 0
       thread = Thread.new{ yield if block_given? }
       if thread.respond_to?(:report_on_exception)
         thread.report_on_exception = false
       end
-      fail TimeoutExceeded if thread.join(timeout).nil?
+
+      if total_workers == nil # Global timeout
+        if thread.join(timeout).nil?
+          fail TimeoutExceeded
+        end
+      else # Worker timeout
+        # Only throw on last worker
+        if thread.join(timeout).nil? && worker_index == total_workers
+          fail TimeoutExceeded
+        else
+          yield if block_given?
+        end
+      end
     elsif block_given?
       yield
     end
