@@ -83,7 +83,7 @@ describe ImageOptim do
         end
       end
 
-      it "will timeout if specified" do
+      it 'will timeout if specified' do
         options = {:skip_missing_workers => false, :timeout => 0.001}
         image_optim = ImageOptim.new(options)
         copies = test_images.map{ |image| temp_copy(image) }
@@ -92,12 +92,12 @@ describe ImageOptim do
         end.to raise_error(ImageOptim::TimeoutExceeded)
       end
 
-      it "will continue to optimize if single worker timeout exceeds" do
+      it 'will continue to optimize if single worker timeout exceeds' do
         options = {
           :skip_missing_workers => true,
           :timeout => 2,
-          :optipng => { :level => 2, :strip => true, :timeout => 0.001 },
-          :advpng => { :level => 1 },
+          :optipng => {:level => 2, :strip => true, :timeout => 0.001},
+          :advpng => {:level => 1},
         }
         image_optim = ImageOptim.new(options)
         copies = test_images.map{ |image| temp_copy(image) }
@@ -110,11 +110,8 @@ describe ImageOptim do
           expect(optimized).to have_size
           expect(optimized).to be_smaller_than(original)
           expect(optimized).not_to have_same_data_as(original)
-
-          compare_to = rotate_images.include?(original) ? rotated : original
         end
       end
-
     end
 
     it 'ignores text file' do
@@ -158,14 +155,13 @@ describe ImageOptim do
       base_options = {
         :skip_missing_workers => true,
         :timeout => 1,
-        :optipng => { :level => 2, :strip => true, :timeout => 1 },
-        :advpng => { :level => 0.001 },
+        :optipng => {:level => 2, :strip => true, :timeout => 1},
+        :advpng => {:level => 0.001},
       }
       image_optim = ImageOptim.new(base_options)
 
       expect(image_optim.optimize_image(test_images.first)).to_not eq(nil)
     end
-
   end
 
   describe '#optimize_image!' do

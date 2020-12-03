@@ -122,7 +122,6 @@ class ImageOptim
 
         begin
           with_timeout(@timeout) do # Global timeout
-
             workers.each.with_index(1) do |worker, index|
               current_worker = worker
               if worker.timeout && worker.timeout >= 0
@@ -269,17 +268,12 @@ private
         thread.report_on_exception = false
       end
 
-      if total_workers == nil # Global timeout
-        if thread.join(timeout).nil?
-          fail TimeoutExceeded
-        end
-      else # Worker timeout
-        # Only throw on last worker
-        if thread.join(timeout).nil? && worker_index == total_workers
-          fail TimeoutExceeded
-        else
-          yield if block_given?
-        end
+      if total_workers.nil? # Global timeout
+        fail TimeoutExceeded if thread.join(timeout).nil?
+      else # Worker timeout. Only throw on last worker.
+        fail TimeoutExceeded if thread.join(timeout).nil? && worker_index == total_workers
+
+        yield if block_given?
       end
     elsif block_given?
       yield

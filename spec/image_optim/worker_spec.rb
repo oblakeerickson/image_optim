@@ -285,7 +285,6 @@ describe ImageOptim::Worker do
   end
 
   describe 'worker timeout option' do
-
     it 'exists on every worker by default' do
       worker_class = Class.new(Worker)
       worker = worker_class.new(ImageOptim.new)
